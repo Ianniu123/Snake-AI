@@ -6,6 +6,7 @@ class player():
     player_y = 300
     player_x_dir = 20
     player_y_dir = 0
+    player_mask = pygame.mask.Mask((20, 20), True)
 
 game_on = True
 
@@ -17,8 +18,12 @@ score = 0
 
 food_x = 0
 food_y = 0
+food_mask = pygame.mask.Mask((20, 20), True)
 
 clock = pygame.time.Clock()
+
+def offset():
+    return int(player.player_x - food_x), int(player.player_y - food_y)
 
 def collision():
     if player.player_x - 20 < 0 or player.player_x + 21 > 800 or player.player_y + 21 > 600 or player.player_y - 20 < 0:
@@ -28,9 +33,11 @@ def collision():
 
 while game_on:
     screen.fill((0,0,0))
+
     for e in pygame.event.get():
         if e.type == pygame.QUIT:
             exit()
+
     pygame.display.set_caption('Snake')    
 
     player.player_x += player.player_x_dir
@@ -41,7 +48,7 @@ while game_on:
     while snack_exist == False:
         food_x = random.randint(0, 800)
         food_y = random.randint(0, 600)
-        if (food_x <= player.player_x - 20 or food_x >= player.player_x + 20) and (food_y <= player.player_y - 20 or food_y >= player.player_y + 20):
+        if (food_x <= player.player_x - 20 or food_x >= player.player_x + 20) and (food_y <= player.player_y - 20 or food_y >= player.player_y + 20) and food_x % 20 == 0 and food_y % 20 == 0:
             snack_exist = True
             break
 
@@ -64,14 +71,14 @@ while game_on:
         player.player_x_dir = 0
         player.player_y_dir = 0
 
-    if ():
+    if player.player_mask.overlap(food_mask, offset()):
         score += 1
         snack_exist = False
-        print("over")
+
 
     pygame.display.update()
 
-    clock.tick(20)
+    clock.tick(10)
 
         
 
