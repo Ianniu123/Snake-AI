@@ -13,13 +13,10 @@ class player():
 pygame.init()
 
 game_on = True
-
 font = pygame.font.Font(pygame.font.get_default_font(), 25)
-
 screen = pygame.display.set_mode((800, 600))
 game_on = True
 snack_exist = False
-
 score = 0
 
 food_x = 0
@@ -39,11 +36,31 @@ def draw_snake(snake_list):
     for x in snake_list:
         pygame.draw.rect(screen, (255, 0, 0), [x[0], x[1], 20, 20], 5)
 
-def collision():
+def collision(snake_list):
     if player.player_x - 20 < 0 or player.player_x + 21 > 800 or player.player_y + 21 > 600 or player.player_y - 20 < 0:
         return True
 
     return False
+
+def controls_west_east():
+    if pygame.key.get_pressed()[pygame.K_RIGHT] == True:
+        player.player_x_dir = 20
+        player.player_y_dir = 0
+        snake_direction = 4
+    elif pygame.key.get_pressed()[pygame.K_LEFT] == True:
+        player.player_x_dir = -20
+        player.player_y_dir = 0
+        snake_direction = 3
+
+def controls_north_south():
+    if pygame.key.get_pressed()[pygame.K_UP] == True and snake_direction != 2:
+        player.player_x_dir = 0
+        player.player_y_dir = -20
+        snake_direction = 1
+    elif pygame.key.get_pressed()[pygame.K_DOWN] == True and snake_direction != 1:
+        player.player_x_dir = 0
+        player.player_y_dir = 20
+        snake_direction = 2
 
 while game_on:
     screen.fill((0,0,0))
@@ -84,25 +101,17 @@ while game_on:
         snack_exist = True
 
     pygame.draw.rect(screen, (255,0,0), (food_x, food_y, 20, 20), 5)
-
-    if pygame.key.get_pressed()[pygame.K_RIGHT] == True and snake_direction != 3 and snake_length > 1:
-        player.player_x_dir = 20
-        player.player_y_dir = 0
-        snake_direction = 4
-    elif pygame.key.get_pressed()[pygame.K_LEFT] == True and snake_direction != 4 and snake_length > 1:
-        player.player_x_dir = -20
-        player.player_y_dir = 0
-        snake_direction = 3
-    elif pygame.key.get_pressed()[pygame.K_UP] == True and snake_direction != 2 and snake_length > 1:
-        player.player_x_dir = 0
-        player.player_y_dir = -20
-        snake_direction = 1
-    elif pygame.key.get_pressed()[pygame.K_DOWN] == True and snake_direction != 1 and snake_length > 1:
-        player.player_x_dir = 0
-        player.player_y_dir = 20
-        snake_direction = 2
+    
+    if snake_direction == 1:
+        controls_west_east()
+    elif snake_direction == 2:
+        controls_west_east()
+    elif snake_direction == 3:
+        controls_north_south()
+    elif snake_direction == 4:
+        controls_north_south()
         
-    if collision():
+    if collision(snake_list):
         player.player_x_dir = 0
         player.player_y_dir = 0
 
