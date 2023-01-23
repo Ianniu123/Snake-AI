@@ -1,6 +1,6 @@
 import pygame
 import random
-import numpy as np
+
 #north: 1; south: 2; west: 3; east: 4;
 
 class player():
@@ -9,8 +9,6 @@ class player():
     player_x_dir = 20
     player_y_dir = 0
     player_mask = pygame.mask.Mask((20, 20), True)
-    action = [1,0,0,0,0]
-
 
 pygame.init()
 
@@ -19,8 +17,6 @@ font = pygame.font.Font(pygame.font.get_default_font(), 25)
 title = pygame.font.Font(pygame.font.get_default_font(), 40)
 screen = pygame.display.set_mode((800, 600))
 score = 0
-
-iteration = 0
 
 food_x = 0
 food_y = 0
@@ -64,73 +60,27 @@ def collision(snake_list, snake_head):
 
 def controls_west_east(snake_direction):
     if pygame.key.get_pressed()[pygame.K_RIGHT] == True:
-        player.action = [0,0,1,0,0]
-    elif pygame.key.get_pressed()[pygame.K_LEFT] == True:
-        player.action = [0,1,0,0,0]
-    
-    if np.array_equal(player.action, [0,0,1,0,0]):
         player.player_x_dir = 20
         player.player_y_dir = 0
         snake_direction = 4
-        player.action = [1,0,0,0,0]
-
-    if np.array_equal(player.action, [0,1,0,0,0]):
+    if pygame.key.get_pressed()[pygame.K_LEFT] == True:
         player.player_x_dir = -20
         player.player_y_dir = 0
         snake_direction = 3
-        player.action = [1,0,0,0,0]
-
     return snake_direction
 
 def controls_north_south(snake_direction):
     if pygame.key.get_pressed()[pygame.K_UP] == True:
-        player.action = [0,0,0,1,0]
-
-    if np.array_equal(player.action, [0,0,0,1,0]):
         player.player_x_dir = 0
         player.player_y_dir = -20
         snake_direction = 1
-        player.action = [1,0,0,0,0]
 
     if pygame.key.get_pressed()[pygame.K_DOWN] == True:
-        player.action = [0,0,0,0,1]
-
-    if np.array_equal(player.action, [0,0,0,0,1]):
         player.player_x_dir = 0
         player.player_y_dir = 20
         snake_direction = 2
-        player.action = [1,0,0,0,0]
-
     return snake_direction
 
-def rules():
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                exit()
-
-            screen.fill((0,0,0))
-            
-            title_1 = font.render('UP_DOWN_LEFT_RIGHT arrow keys to controll the snake.' , True , (255,255,255))
-            text_1 = font.render('Eat the snack to gain a point.' , True , (255,255,255))
-            text_2 = font.render('If the snake collides with the wall or itself, the game is over.' , True , (255,255,255))
-            screen.blit(title_1, (50, height/2 - 120))
-            screen.blit(text_1, (50, height/2 - 40))
-            screen.blit(text_2, (50, height/2 + 30)) 
-
-            text_3 = font.render('Play' , True , (255,255,255)) 
-            pygame.draw.rect(screen, (255,255,255), (width/2 - 65, height/2 + 85, 150, 40), 1)
-            screen.blit(text_3, (width/2 - 20,height/2 + 95)) 
-
-            mouse_pos = pygame.mouse.get_pos()
-                
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if width/2 - 65 <= mouse_pos[0] <= width/2 + 95 and height/2 + 85 <= mouse_pos[1] <= height/2 + 125:
-                    return True
-                    
-            pygame.display.update()
-
-# Funciton for play again
 def game_over(score):
     while True:
         for event in pygame.event.get():
@@ -160,17 +110,27 @@ def game_over(score):
 
             pygame.display.update()
 
-def reset():
-    score = 0
-    snake_list = []
-    snake_length = 4
-    player.player_x = 400
-    player.player_y = 300
-    player.player_x_dir = 20
-    player.player_y_dir = 0
-    snake_head = []
-    food_exist = False  
-    return score, snake_list, snake_length, snake_head, food_exist
+while True:
+    for e in pygame.event.get():
+        if e.type == pygame.QUIT:
+            exit()
+
+    screen.blit(title_1, (width/2 - 50,height/2 - 120))
+    screen.blit(text_1, (width/2 - 55,height/2 - 40))
+    screen.blit(text_2, (width/2 - 25,height/2 + 30)) 
+    screen.blit(text_3, (width/2 - 20,height/2 + 95)) 
+
+    mouse_pos = pygame.mouse.get_pos()
+
+    if e.type == pygame.MOUSEBUTTONDOWN:
+        if width/2 - 65 <= mouse_pos[0] <= width/2 + 95 and height/2 - 45 <= mouse_pos[1] <= height/2 - 5:
+            break
+        elif width/2 - 65 <= mouse_pos[0] <= width/2 + 95 and height/2 + 20 <= mouse_pos[1] <= height/2 + 60:
+            print("Rules")
+        elif width/2 - 65 <= mouse_pos[0] <= width/2 + 95 and height/2 + 85 <= mouse_pos[1] <= height/2 + 125:
+            exit()
+
+    pygame.display.update()
         
 while game_on:
     screen.fill((0,0,0))
@@ -218,27 +178,25 @@ while game_on:
     pygame.display.update()
 
     if collision(snake_list, snake_head):
-        reward = -10
-        score, snake_list, snake_length, snake_head, food_exist = reset()
+        if not game_over(score):
+            score = 0
+            snake_list = []
+            snake_length = 4
+            player.player_x = 400
+            player.player_y = 300
+            player.player_x_dir = 20
+            player.player_y_dir = 0
+            snake_head = []
+            food_exist = False
 
+        elif game_over(score):
+            exit()
 
     if player.player_mask.overlap(food_mask, offset()):
         score += 1
         snake_length += 1
-        reward = 10
         food_exist = False
 
     pygame.display.update()
 
     clock.tick(15)
-
-        
-
-
-
-
-
-
-
-
-
