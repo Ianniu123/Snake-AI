@@ -1,67 +1,150 @@
 import pygame
 import random
 import numpy as np
-#north: 1; south: 2; west: 3; east: 4;
-
-class player():
-    player_x = 400
-    player_y = 300
-    player_x_dir = 20
-    player_y_dir = 0
-    player_mask = pygame.mask.Mask((20, 20), True)
-    action = [1,0,0,0,0]
-
+from enum import Enum
 
 pygame.init()
 
-game_on = True
-font = pygame.font.Font(pygame.font.get_default_font(), 25)
-title = pygame.font.Font(pygame.font.get_default_font(), 40)
-screen = pygame.display.set_mode((800, 600))
-score = 0
+class Direction(Enum):
+    LEFT = 1
+    RIGHT = 2
+    UP = 3
+    DOWN = 4
 
-iteration = 0
+class Snake():
 
-food_x = 0
-food_y = 0
-food_mask = pygame.mask.Mask((20, 20), True)
-food_exist = False
+    def __init__(self):
+        self.x = 400
+        self.y = 300
+        self.head = []
+        self.list = []
+        self.length = 4
+        self.direction = 2
+        self.mask = pygame.mask.Mask((20, 20), True)
+        self.head.append(self.x)
+        self.head.append(self.y)
+        self.list.append(self.head)
 
-clock = pygame.time.Clock()
+    def draw_snake(self, screen):
+        for x in self.list:
+            pygame.draw.rect(screen, (255, 0, 0), [x[0], x[1], 20, 20], 5)
 
-snake_list = []
-snake_length = 4
-snake_direction = 4
+    def collision(self):
+        if self.x < 0 or self.x > 800 or self.y > 600 or self.y < 0:
+            return True
+        if self.head in self.list[:-1]:
+            return True
+        return False
 
-width = screen.get_width()
-height = screen.get_height()
+class Food():
 
-title_1 = title.render('Snake' , True , (255,255,255)) 
+    def __init__(self):
+        self.x, self.y = self.make_food()
+        self.mask = pygame.mask.Mask((20, 20), True)
+        self.exist = True
+    
+    def make_food():
+        x = round(random.randrange(0, 800 - 20) / 20.0) * 20.0
+        y = round(random.randrange(0, 600 - 20) / 20.0) * 20.0
+        return x, y
 
-text_1 = font.render('Start game' , True , (255,255,255)) 
-pygame.draw.rect(screen, (255,255,255), (width/2 - 65, height/2 - 45, 150, 40), 1)
+    def draw_food(self, screen):
+        pygame.draw.rect(screen, (255,0,0), (self.x, self.y, 20, 20), 5)
 
-text_2 = font.render('Rules' , True , (255,255,255)) 
-pygame.draw.rect(screen, (255,255,255), (width/2 - 65, height/2 + 20, 150, 40), 1)
+class SnakeGameAI:
 
-text_3 = font.render('Quit' , True , (255,255,255)) 
-pygame.draw.rect(screen, (255,255,255), (width/2 - 65, height/2 + 85, 150, 40), 1)
+    def __init__(self):
+        self.screen = pygame.display.set_mode((800, 600))
+        self.font = pygame.font.Font(pygame.font.get_default_font(), 25)
+        self.title = pygame.font.Font(pygame.font.get_default_font(), 40)
+        self.clock = pygame.time.Clock()
+        self.reset()
+    
+    def reset(self):
+        self.snake = Snake()
+        self.food = Food()
+        self.game_over = False
+        self.score = 0
+    
+    def offset(self):
+        return int(self.snake.x - self.food.x), int(self.snake.y - self.food.y)
 
+    def play_step(self, action):
 
-def offset():
-    return int(player.player_x - food_x), int(player.player_y - food_y)
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                exit()
 
-def draw_snake(snake_list):
-    for x in snake_list:
-        pygame.draw.rect(screen, (255, 0, 0), [x[0], x[1], 20, 20], 5)
+        self.screen.fill((0,0,0))
+        text = self.font.render("Score: " + str(score), True, (255, 255, 255))
+        self.screen.blit(text, [0, 0])
+        pygame.display.set_caption('Snake') 
 
-def collision(snake_list, snake_head):
-    if player.player_x < 0 or player.player_x > 800 or player.player_y > 600 or player.player_y < 0:
-        return True
-    if snake_head in snake_list[:-1]:
-        return True
-    return False
+        if len(self.snake.list) > self.snake.length:
+            del self.snake.list[0]
 
+        reward = 0
+        
+        if self.snake.collision():
+            self.game_over = True
+            reward = -100
+            return reward, self.game_over, self.score
+        
+        if self.snake.mask.overlap(self.food.mask, self.offset(self)):
+            self.score += 1
+            self.snake.length += 1
+            reward = 10
+            self.food = Food()
+        
+        pygame.display.update()
+
+        self.clock.tick(15)
+
+        return self.get_state(), reward, self.game_over, self.score
+    
+    def get_state(self):
+        snake_head = self.snake.head
+
+        check_left = snake_head[0] - 20
+        check_right = snake_head[0] + 20
+        check_up = snake_head[1] - 20
+        check_down = snake_head[1] + 20
+
+        is_leftdir = self.snake.direction == Direction.LEFT
+        is_rightdir = self.snake.direction == Direction.RIGHT
+        is_updir = self.snake.direction == Direction.UP
+        is_downdir = self.snake.direction == Direction.DOWN
+
+        state = [
+
+            (is_leftdir and self.snake.collision(check_left)) or
+            (is_rightdir and self.snake.collision(check_right)) or 
+            (is_updir and self.snake.collision(check_up)) or
+            (is_downdir and self.snake.collision(check_down)),
+
+            (is_leftdir and self.snake.collision(check_up)) or 
+            (is_rightdir and self.snake.collision(check_down)) or
+            (is_updir and self.snake.collision(check_right)) or
+            (is_downdir and self.snake.collision(check_left)),
+
+            (is_leftdir and self.snake.collision(check_down)) or 
+            (is_rightdir and self.snake.collision(check_up)) or
+            (is_updir and self.snake.collision(check_left)) or
+            (is_downdir and self.snake.collision(check_right)),
+
+            is_leftdir,
+            is_rightdir,
+            is_updir,
+            is_downdir,
+
+            self.snake_head[0] > self.food.x, #food left
+            self.snake_head[0] < self.food.x, #food right
+            self.snake_head[1] > self.food.y, #food up
+            self.snake_head[1] < self.food.y, #food down
+        ]
+
+        return np.array(state, dtype=int)
+    
 def controls_west_east(snake_direction):
     if pygame.key.get_pressed()[pygame.K_RIGHT] == True:
         player.action = [0,0,1,0,0]
@@ -103,136 +186,24 @@ def controls_north_south(snake_direction):
 
     return snake_direction
 
-def rules():
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                exit()
 
-            screen.fill((0,0,0))
-            
-            title_1 = font.render('UP_DOWN_LEFT_RIGHT arrow keys to controll the snake.' , True , (255,255,255))
-            text_1 = font.render('Eat the snack to gain a point.' , True , (255,255,255))
-            text_2 = font.render('If the snake collides with the wall or itself, the game is over.' , True , (255,255,255))
-            screen.blit(title_1, (50, height/2 - 120))
-            screen.blit(text_1, (50, height/2 - 40))
-            screen.blit(text_2, (50, height/2 + 30)) 
-
-            text_3 = font.render('Play' , True , (255,255,255)) 
-            pygame.draw.rect(screen, (255,255,255), (width/2 - 65, height/2 + 85, 150, 40), 1)
-            screen.blit(text_3, (width/2 - 20,height/2 + 95)) 
-
-            mouse_pos = pygame.mouse.get_pos()
-                
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if width/2 - 65 <= mouse_pos[0] <= width/2 + 95 and height/2 + 85 <= mouse_pos[1] <= height/2 + 125:
-                    return True
-                    
-            pygame.display.update()
-
-# Funciton for play again
-def game_over(score):
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                exit()
-
-            screen.fill((0,0,0))
-
-            title_1 = title.render(f'Your final score is {score}' , True , (255,255,255)) 
-            screen.blit(title_1, (width/2 - 160, height/2 - 120))
-
-            text_1 = font.render('Play Again' , True , (255,255,255)) 
-            pygame.draw.rect(screen, (255,255,255), (width/2 - 65, height/2 - 45, 150, 40), 1)
-            screen.blit(text_1, (width/2 - 55, height/2 - 40))
-
-            text_2 = font.render('Quit' , True , (255,255,255)) 
-            pygame.draw.rect(screen, (255,255,255), (width/2 - 65, height/2 + 20, 150, 40), 1)
-            screen.blit(text_2, (width/2 - 25, height/2 + 30)) 
-
-            mouse_pos = pygame.mouse.get_pos()
-            
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if width/2 - 65 <= mouse_pos[0] <= width/2 + 95 and height/2 - 45 <= mouse_pos[1] <= height/2 - 5:
-                    return False
-                elif width/2 - 65 <= mouse_pos[0] <= width/2 + 95 and height/2 + 20 <= mouse_pos[1] <= height/2 + 60:
-                    return True
-
-            pygame.display.update()
-
-def reset():
-    score = 0
-    snake_list = []
-    snake_length = 4
-    player.player_x = 400
-    player.player_y = 300
-    player.player_x_dir = 20
-    player.player_y_dir = 0
-    snake_head = []
-    food_exist = False  
-    return score, snake_list, snake_length, snake_head, food_exist
-        
-while game_on:
-    screen.fill((0,0,0))
-
-    text = font.render("Score: " + str(score), True, (255, 255, 255))
-
-    screen.blit(text, [0, 0])
-
-    for e in pygame.event.get():
-        if e.type == pygame.QUIT:
-            exit()
-
-    pygame.display.set_caption('Snake')    
-
-    player.player_x += player.player_x_dir
-    player.player_y += player.player_y_dir
-
-    snake_head = []
-    snake_head.append(player.player_x)
-    snake_head.append(player.player_y)
-    snake_list.append(snake_head)
-    
-    if len(snake_list) > snake_length:
-        del snake_list[0]
-
-    draw_snake(snake_list)
-
-    if snake_direction == 1:
-        snake_direction = controls_west_east(snake_direction)
-    elif snake_direction == 2:
-        snake_direction = controls_west_east(snake_direction)
-    elif snake_direction == 3:
-        snake_direction = controls_north_south(snake_direction)
-    elif snake_direction == 4:
-        snake_direction = controls_north_south(snake_direction)
-
-    while food_exist == False:
-        # Make it so that it works with body
-        food_x = round(random.randrange(0, 800 - 20) / 20.0) * 20.0
-        food_y = round(random.randrange(0, 600 - 20) / 20.0) * 20.0
-        food_exist = True
-
-    pygame.draw.rect(screen, (255,0,0), (food_x, food_y, 20, 20), 5)
-    
-    pygame.display.update()
-
-    if collision(snake_list, snake_head):
-        reward = -10
-        score, snake_list, snake_length, snake_head, food_exist = reset()
+def gameStart():
+    while game_on:
 
 
-    if player.player_mask.overlap(food_mask, offset()):
-        score += 1
-        snake_length += 1
-        reward = 10
-        food_exist = False
+        pygame.display.set_caption('Snake')    
 
-    pygame.display.update()
+        player.player_x += player.player_x_dir
+        player.player_y += player.player_y_dir
 
-    clock.tick(15)
-
-        
+        if snake_direction == 1:
+            snake_direction = controls_west_east(snake_direction)
+        elif snake_direction == 2:
+            snake_direction = controls_west_east(snake_direction)
+        elif snake_direction == 3:
+            snake_direction = controls_north_south(snake_direction)
+        elif snake_direction == 4:
+            snake_direction = controls_north_south(snake_direction)
 
 
 
